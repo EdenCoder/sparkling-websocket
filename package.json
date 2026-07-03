@@ -1,8 +1,7 @@
 {
-  "name": "@dollhousestudio/sparkling-websocket",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Native WebSocket Sparkling Method + JS WebSocket polyfill for Lynx/PrimJS",
+  "name": "sparkling-websocket",
+  "version": "0.1.0",
+  "description": "Native WebSocket for Lynx/PrimJS — Sparkling Method bridge + JS polyfill (Android & iOS)",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -39,11 +38,16 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
+  "keywords": ["lynx", "websocket", "primjs", "sparkling-method", "react-lynx"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EdenCoder/sparkling-websocket"
+  },
   "dependencies": {
     "sparkling-method": "^2.0.1"
   },
   "devDependencies": {
-    "@dollhousestudio/typescript-config": "workspace:*",
     "typescript": "^5.9.3"
   }
 }
