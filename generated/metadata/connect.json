@@ -1,0 +1,85 @@
+{
+  "name": "connect",
+  "description": "Open a WebSocket. Events stream via `Websocket.event` (see ./event).",
+  "moduleName": "Websocket",
+  "packageName": "com.dollhousestudio.websocket",
+  "source": "src/method.d.ts",
+  "request": {
+    "kind": "reference",
+    "name": "ConnectRequest"
+  },
+  "response": {
+    "kind": "reference",
+    "name": "ConnectResponse"
+  },
+  "interfaces": {
+    "ConnectRequest": {
+      "name": "ConnectRequest",
+      "description": "sparkling-websocket — native WebSocket bridge for Sparkling.\n\nNative platform WebSocket (OkHttp on Android, URLSession on iOS)\nexposed to Lynx JS so a `WebSocket` polyfill can be installed on\n`globalThis`, letting socket.io-client's websocket transport run on\nPrimJS unchanged.\n\nEach method is a one-shot request/response. Socket events stream\nout-of-band through Lynx's GlobalEventEmitter — native emits the\n`Websocket.event` event, JS subscribes via `pipe.on('Websocket.event')`\n(see ./event). This keeps the codegen model one-response-per-method.",
+      "fields": [
+        {
+          "name": "url",
+          "optional": false,
+          "description": "`ws://` or `wss://` URL.",
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        },
+        {
+          "name": "protocols",
+          "optional": true,
+          "description": "Optional subprotocols.",
+          "type": {
+            "kind": "array",
+            "elementType": {
+              "kind": "primitive",
+              "name": "string"
+            }
+          }
+        }
+      ]
+    },
+    "ConnectResponse": {
+      "name": "ConnectResponse",
+      "fields": [
+        {
+          "name": "code",
+          "optional": false,
+          "description": "1 = opened, 0 = failed, negative = error.",
+          "type": {
+            "kind": "primitive",
+            "name": "number"
+          }
+        },
+        {
+          "name": "msg",
+          "optional": false,
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        },
+        {
+          "name": "data",
+          "optional": true,
+          "type": {
+            "kind": "object",
+            "fields": [
+              {
+                "name": "socketId",
+                "optional": false,
+                "description": "Opaque id; reused in every `Websocket.event` for this socket.",
+                "type": {
+                  "kind": "primitive",
+                  "name": "string"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "generatedAt": "2026-06-29T23:32:55.961Z"
+}

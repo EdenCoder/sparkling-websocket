@@ -1,0 +1,61 @@
+{
+  "name": "send",
+  "description": "Send a text frame.",
+  "moduleName": "Websocket",
+  "packageName": "com.dollhousestudio.websocket",
+  "source": "src/method.d.ts",
+  "request": {
+    "kind": "reference",
+    "name": "SendRequest"
+  },
+  "response": {
+    "kind": "reference",
+    "name": "SendResponse"
+  },
+  "interfaces": {
+    "SendRequest": {
+      "name": "SendRequest",
+      "fields": [
+        {
+          "name": "socketId",
+          "optional": false,
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        },
+        {
+          "name": "data",
+          "optional": false,
+          "description": "Text frame.",
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        }
+      ]
+    },
+    "SendResponse": {
+      "name": "SendResponse",
+      "fields": [
+        {
+          "name": "code",
+          "optional": false,
+          "type": {
+            "kind": "primitive",
+            "name": "number"
+          }
+        },
+        {
+          "name": "msg",
+          "optional": false,
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        }
+      ]
+    }
+  },
+  "generatedAt": "2026-06-29T23:32:55.967Z"
+}

@@ -1,0 +1,6 @@
+{
+  "packageName": "com.dollhousestudio.websocket",
+  "moduleName": "Websocket",
+  "androidDsl": "kts",
+  "projectName": "websocket"
+}

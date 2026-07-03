@@ -1,0 +1,49 @@
+{
+  "name": "@dollhousestudio/sparkling-websocket",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Native WebSocket Sparkling Method + JS WebSocket polyfill for Lynx/PrimJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./event": {
+      "types": "./dist/event.d.ts",
+      "import": "./dist/event.js"
+    },
+    "./polyfill": {
+      "types": "./dist/polyfill.d.ts",
+      "import": "./dist/polyfill.js"
+    },
+    "./install": {
+      "types": "./dist/install.d.ts",
+      "import": "./dist/install.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "android/src",
+    "android/build.gradle.kts",
+    "ios",
+    "module.config.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "codegen": "sparkling-method-cli codegen",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "sparkling-method": "^2.0.1"
+  },
+  "devDependencies": {
+    "@dollhousestudio/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

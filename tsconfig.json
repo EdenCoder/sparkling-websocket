@@ -1,0 +1,15 @@
+{
+  "extends": "@dollhousestudio/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["src/**/*.ts", "index.ts"],
+  "exclude": ["dist", "android", "ios", "generated", "node_modules"]
+}
