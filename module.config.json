@@ -2,5 +2,9 @@
   "packageName": "com.dollhousestudio.websocket",
   "moduleName": "Websocket",
   "androidDsl": "kts",
-  "projectName": "websocket"
+  "projectName": "websocket",
+  "ios": {
+    "moduleName": "Websocket",
+    "podspecPath": "ios/Sparkling-Websocket.podspec"
+  }
 }

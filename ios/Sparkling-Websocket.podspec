@@ -8,5 +8,16 @@ Pod::Spec.new do |s|
   s.author           = { 'sparkling' => 'dev@example.com' }
   s.source           = { :path => '.' }
   s.source_files     = 'Source/**/*.{h,m,mm,swift}'
-  s.swift_version    = '5.0'
+  s.swift_version    = '5.7'
+  s.platforms        = { :ios => '12.0' }
+  s.static_framework = true
+
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'SWIFT_COMPILATION_MODE' => 'wholemodule'
+  }
+
+  s.dependency 'SparklingMethod/Core'
+  s.dependency 'SparklingMethod/Lynx'
+  s.dependency 'Lynx/Framework'
 end
