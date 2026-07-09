@@ -9,7 +9,12 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 export function base64ToBytes(b64: string): Uint8Array {
   const clean = b64.replace(/[^A-Za-z0-9+/]/g, '')
   const len = clean.length
-  const out = new Uint8Array((len >> 2) * 3)
+  // Round the group count UP: padded input ('=' stripped above) leaves
+  // len % 4 == 2 or 3, whose tail still decodes to 1-2 bytes. Sizing by
+  // `len >> 2` dropped those trailing bytes (out-of-range Uint8Array
+  // writes are silently ignored), which truncated the gzip stream and
+  // broke its final length check.
+  const out = new Uint8Array((((len + 3) >> 2) >>> 0) * 3)
   let p = 0
   for (let i = 0; i < len; i += 4) {
     const c0 = ALPHABET.indexOf(clean[i]!)
