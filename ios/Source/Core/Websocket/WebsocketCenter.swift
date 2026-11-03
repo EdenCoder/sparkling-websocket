@@ -18,7 +18,6 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
 
     private let lock = NSLock()
     private var sockets: [String: URLSessionWebSocketTask] = [:]
-    private var socketIdsByTask: [ObjectIdentifier: String] = [:]
     private var emitters: [String: ([String: Any]) -> Void] = [:]
 
     private lazy var session = URLSession(
@@ -37,20 +36,6 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         emitter(payload)
     }
 
-    private func drop(_ socketId: String) {
-        lock.lock()
-        if let task = sockets.removeValue(forKey: socketId) {
-            socketIdsByTask.removeValue(forKey: ObjectIdentifier(task))
-        }
-        lock.unlock()
-    }
-
-    private func socketId(for task: URLSessionTask) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        return socketIdsByTask[ObjectIdentifier(task)]
-    }
-
     public func connect(url: String, protocols: [String], emitter: @escaping ([String: Any]) -> Void) -> String? {
         guard let target = URL(string: url) else { return nil }
         let socketId = UUID().uuidString
@@ -59,9 +44,9 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
             request.setValue(protocols.joined(separator: ", "), forHTTPHeaderField: "Sec-WebSocket-Protocol")
         }
         let task = session.webSocketTask(with: request)
+        task.taskDescription = socketId
         lock.lock()
         sockets[socketId] = task
-        socketIdsByTask[ObjectIdentifier(task)] = socketId
         emitters[socketId] = emitter
         lock.unlock()
         receive(socketId, task)
@@ -85,19 +70,11 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
                     break
                 }
                 self.receive(socketId, task)
-            case .failure(let error):
-                self.drop(socketId)
-                self.emit(socketId, "error", ["reason": error.localizedDescription])
-                self.emit(socketId, "close", ["code": 1006, "reason": error.localizedDescription])
-                self.removeEmitter(socketId)
+            case .failure:
+                // URLSession's completion delegate owns terminal events and cleanup.
+                break
             }
         }
-    }
-
-    private func removeEmitter(_ socketId: String) {
-        lock.lock()
-        emitters.removeValue(forKey: socketId)
-        lock.unlock()
     }
 
     public func send(_ socketId: String, data: String) -> Bool {
@@ -106,24 +83,17 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         lock.unlock()
         guard let task else { return false }
         task.send(.string(data)) { _ in
-            // Failures surface through the receive loop as 'error'/'close'.
+            // The completion delegate sends terminal events.
         }
         return true
     }
 
     public func close(_ socketId: String, code: Int?, reason: String?) {
         lock.lock()
-        let task = sockets.removeValue(forKey: socketId)
-        if let task { socketIdsByTask.removeValue(forKey: ObjectIdentifier(task)) }
+        let task = sockets[socketId]
         lock.unlock()
         let closeCode = URLSessionWebSocketTask.CloseCode(rawValue: code ?? 1000) ?? .normalClosure
         task?.cancel(with: closeCode, reason: reason?.data(using: .utf8))
-        // 'close' is emitted from the delegate; emit here too in case the
-        // task was already dead (mirrors Android's eager close event).
-        if task == nil {
-            emit(socketId, "close", ["code": code ?? 1000, "reason": reason ?? ""])
-            removeEmitter(socketId)
-        }
     }
 
     // MARK: URLSessionWebSocketDelegate
@@ -133,21 +103,27 @@ public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         webSocketTask: URLSessionWebSocketTask,
         didOpenWithProtocol protocol: String?
     ) {
-        guard let socketId = socketId(for: webSocketTask) else { return }
+        guard let socketId = webSocketTask.taskDescription else { return }
         emit(socketId, "open")
     }
 
     public func urlSession(
         _ session: URLSession,
-        webSocketTask: URLSessionWebSocketTask,
-        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
-        reason: Data?
+        task: URLSessionTask,
+        didCompleteWithError error: Error?
     ) {
-        guard let socketId = socketId(for: webSocketTask) else { return }
-        drop(socketId)
-        let reasonText = reason.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-        emit(socketId, "close", ["code": closeCode.rawValue, "reason": reasonText])
-        removeEmitter(socketId)
+        guard let task = task as? URLSessionWebSocketTask, let socketId = task.taskDescription else { return }
+        lock.lock()
+        sockets.removeValue(forKey: socketId)
+        let emitter = emitters.removeValue(forKey: socketId)
+        lock.unlock()
+        guard let emitter else { return }
+        let code = task.closeCode == .invalid ? 1006 : task.closeCode.rawValue
+        let reason = task.closeReason.flatMap { String(data: $0, encoding: .utf8) } ?? error?.localizedDescription ?? ""
+        if code == 1006 {
+            emitter(["socketId": socketId, "event": "error", "reason": reason])
+        }
+        emitter(["socketId": socketId, "event": "close", "code": code, "reason": reason])
     }
 }
 

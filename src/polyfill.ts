@@ -20,10 +20,22 @@ let bridge = { connect, send, close, onEvent };
 
 export type ReadyState = 0 | 1 | 2 | 3;
 
-export interface OpenEvent { type: 'open' }
-export interface MessageEvent { type: 'message'; data: string | ArrayBuffer }
-export interface CloseEvent { type: 'close'; code: number; reason: string; wasClean: boolean }
-export interface ErrorEvent { type: 'error' }
+export interface OpenEvent {
+  type: 'open';
+}
+export interface MessageEvent {
+  type: 'message';
+  data: string | ArrayBuffer;
+}
+export interface CloseEvent {
+  type: 'close';
+  code: number;
+  reason: string;
+  wasClean: boolean;
+}
+export interface ErrorEvent {
+  type: 'error';
+}
 
 type OpenHandler = (ev: OpenEvent) => void;
 type MessageHandler = (ev: MessageEvent) => void;
@@ -73,24 +85,27 @@ export class WebSocketPolyfill {
   private readonly errorH = new Set<ErrorHandler>();
   private socketId: string | null = null;
   private state: ReadyState = 0;
+  private closeOnConnect: (() => void) | null = null;
 
   constructor(url: string, protocols?: string | string[]) {
-    this.url = url
-    ensureGlobalSubscription()
-    const protoList = Array.isArray(protocols) ? protocols : protocols ? [protocols] : []
+    this.url = url;
+    ensureGlobalSubscription();
+    const protoList = Array.isArray(protocols) ? protocols : protocols ? [protocols] : [];
     bridge.connect({ url, protocols: protoList }, (res) => {
-      // Native serialization may nest (data.socketId | data.data.socketId).
-      const d = res.data as { socketId?: string; data?: { socketId?: string } } | undefined
-      const socketId = d?.socketId ?? d?.data?.socketId
+      // Android's Sparkling method wraps its result; the runtime module and iOS return data directly.
+      const d = res.data as { socketId?: string; data?: { socketId?: string } } | undefined;
+      const socketId = d?.socketId ?? d?.data?.socketId;
       if (res.code === 1 && socketId) {
         this.socketId = socketId;
         instances.set(this.socketId, this);
+        this.closeOnConnect?.();
         // native emits 'open' next; readyState flips there
       } else {
         this.state = 3;
         this.fireError();
         this.fireClose(res.code ?? 1006, res.msg ?? 'connect failed', false);
       }
+      this.closeOnConnect = null;
     });
   }
 
@@ -110,11 +125,13 @@ export class WebSocketPolyfill {
   close(code = 1000, reason?: string): void {
     if (this.state === 2 || this.state === 3) return;
     this.state = 2;
-    if (this.socketId) {
-      bridge.close({ socketId: this.socketId, code, reason }, () => {
+    const close = () => {
+      bridge.close({ socketId: this.socketId!, code, reason }, () => {
         /* final 'close' arrives via the global subscription */
       });
-    }
+    };
+    if (this.socketId) close();
+    else this.closeOnConnect = close;
   }
 
   addEventListener(type: 'open', h: OpenHandler): void;
@@ -141,12 +158,14 @@ export class WebSocketPolyfill {
 
   /** @internal — called by the global event subscription. */
   __dispatch(e: SocketEvent): void {
-    if (e.socketId !== this.socketId) return;
+    if (e.socketId !== this.socketId || this.state === 3) return;
     if (e.event === 'open') {
+      if (this.state !== 0) return;
       this.state = 1;
       this.onopen?.({ type: 'open' });
       this.openH.forEach((h) => h({ type: 'open' }));
     } else if (e.event === 'message') {
+      if (this.state !== 1) return;
       // Binary frames (gzip RPC responses) arrive as base64; decode to
       // ArrayBuffer so engine.io (binaryType 'arraybuffer') + pako.ungzip work.
       const data: string | ArrayBuffer = e.binary
@@ -158,7 +177,7 @@ export class WebSocketPolyfill {
     } else if (e.event === 'close') {
       this.state = 3;
       instances.delete(e.socketId);
-      this.fireClose(e.code ?? 1000, e.reason ?? '', true);
+      this.fireClose(e.code ?? 1000, e.reason ?? '', e.code !== 1006);
     } else if (e.event === 'error') {
       this.fireError();
     }

@@ -1,6 +1,4 @@
 // Native WebSocket Sparkling Method — Android (OkHttp).
-// Verified to compile against sparkling-method 2.0.1 + AGP 7.4.2 / JDK 11.
-// Runtime + registration still need on-device validation.
 
 package com.dollhousestudio.websocket.websocket
 
@@ -29,11 +27,7 @@ private const val TAG = "WSNative"
 object WebsocketManager {
     private val client by lazy { OkHttpClient.Builder().build() }
     private val sockets = ConcurrentHashMap<String, WebSocket>()
-    // Each socket gets its own emitter tied to the LynxView that
-    // called `connect`. A single shared emitter would dispatch the
-    // second page's events back to the first page's view after
-    // navigation (since pages live in the same process / share this
-    // singleton manager).
+    // Each socket sends events to its owning runtime or view.
     private val emitters = ConcurrentHashMap<String, (JSONObject) -> Unit>()
 
     private fun emit(socketId: String, event: String, extra: Map<String, Any> = emptyMap()) {
@@ -90,8 +84,7 @@ object WebsocketManager {
     fun send(socketId: String, data: String): Boolean = sockets[socketId]?.send(data) ?: false
 
     fun close(socketId: String, code: Int?, reason: String?) {
-        sockets.remove(socketId)?.close(code ?: 1000, reason ?: "")
-        emitters.remove(socketId)
+        sockets[socketId]?.close(code ?: 1000, reason ?: "")
     }
 }
 
