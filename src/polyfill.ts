@@ -16,6 +16,8 @@ import { close, connect, send } from './index';
 import { onEvent, type SocketEvent } from './event';
 import { base64ToBytes } from './base64';
 
+let bridge = { connect, send, close, onEvent };
+
 export type ReadyState = 0 | 1 | 2 | 3;
 
 export interface OpenEvent { type: 'open' }
@@ -33,7 +35,7 @@ let unsubscribe: (() => void) | null = null;
 
 function ensureGlobalSubscription(): void {
   if (unsubscribe) return;
-  unsubscribe = onEvent((e) => {
+  unsubscribe = bridge.onEvent((e) => {
     instances.get(e.socketId)?.__dispatch(e);
   });
 }
@@ -76,7 +78,7 @@ export class WebSocketPolyfill {
     this.url = url
     ensureGlobalSubscription()
     const protoList = Array.isArray(protocols) ? protocols : protocols ? [protocols] : []
-    connect({ url, protocols: protoList }, (res) => {
+    bridge.connect({ url, protocols: protoList }, (res) => {
       // Native serialization may nest (data.socketId | data.data.socketId).
       const d = res.data as { socketId?: string; data?: { socketId?: string } } | undefined
       const socketId = d?.socketId ?? d?.data?.socketId
@@ -100,7 +102,7 @@ export class WebSocketPolyfill {
     if (this.state !== 1 || !this.socketId) {
       throw new Error('WebSocket is not in OPEN state');
     }
-    send({ socketId: this.socketId, data }, () => {
+    bridge.send({ socketId: this.socketId, data }, () => {
       /* errors surface as 'error' events */
     });
   }
@@ -109,7 +111,7 @@ export class WebSocketPolyfill {
     if (this.state === 2 || this.state === 3) return;
     this.state = 2;
     if (this.socketId) {
-      close({ socketId: this.socketId, code, reason }, () => {
+      bridge.close({ socketId: this.socketId, code, reason }, () => {
         /* final 'close' arrives via the global subscription */
       });
     }
@@ -175,8 +177,9 @@ export class WebSocketPolyfill {
 }
 
 /** Register the polyfill as the global `WebSocket`. Idempotent. */
-export function installWebSocket(): void {
+export function installWebSocket(native: typeof bridge = bridge): void {
   const g = globalThis as { WebSocket?: unknown };
   if (g.WebSocket) return;
+  bridge = native;
   g.WebSocket = WebSocketPolyfill;
 }

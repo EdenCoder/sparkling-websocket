@@ -11,13 +11,10 @@ import Lynx
 
 private let kWebsocketEvent = "Websocket.event"
 
-/// Holds live sockets keyed by id and fans native callbacks out as JS
-/// events. Each socket gets its own emitter tied to the LynxView that
-/// called `connect`, so events route back to the page that owns the
-/// socket even when several pages share the process.
+/// Each socket sends events through the emitter supplied by its owning runtime or view.
 @available(iOS 13.0, *)
-final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
-    static let shared = WebsocketCenter()
+public final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
+    public static let shared = WebsocketCenter()
 
     private let lock = NSLock()
     private var sockets: [String: URLSessionWebSocketTask] = [:]
@@ -54,7 +51,7 @@ final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         return socketIdsByTask[ObjectIdentifier(task)]
     }
 
-    func connect(url: String, protocols: [String], emitter: @escaping ([String: Any]) -> Void) -> String? {
+    public func connect(url: String, protocols: [String], emitter: @escaping ([String: Any]) -> Void) -> String? {
         guard let target = URL(string: url) else { return nil }
         let socketId = UUID().uuidString
         var request = URLRequest(url: target)
@@ -103,7 +100,7 @@ final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         lock.unlock()
     }
 
-    func send(_ socketId: String, data: String) -> Bool {
+    public func send(_ socketId: String, data: String) -> Bool {
         lock.lock()
         let task = sockets[socketId]
         lock.unlock()
@@ -114,7 +111,7 @@ final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         return true
     }
 
-    func close(_ socketId: String, code: Int?, reason: String?) {
+    public func close(_ socketId: String, code: Int?, reason: String?) {
         lock.lock()
         let task = sockets.removeValue(forKey: socketId)
         if let task { socketIdsByTask.removeValue(forKey: ObjectIdentifier(task)) }
@@ -131,7 +128,7 @@ final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
 
     // MARK: URLSessionWebSocketDelegate
 
-    func urlSession(
+    public func urlSession(
         _ session: URLSession,
         webSocketTask: URLSessionWebSocketTask,
         didOpenWithProtocol protocol: String?
@@ -140,7 +137,7 @@ final class WebsocketCenter: NSObject, URLSessionWebSocketDelegate {
         emit(socketId, "open")
     }
 
-    func urlSession(
+    public func urlSession(
         _ session: URLSession,
         webSocketTask: URLSessionWebSocketTask,
         didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,

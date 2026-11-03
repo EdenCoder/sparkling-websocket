@@ -26,7 +26,7 @@ private const val FAIL = 0
 private const val TAG = "WSNative"
 
 /** Holds live sockets keyed by id and fans native callbacks out as JS events. */
-internal object WebsocketManager {
+object WebsocketManager {
     private val client by lazy { OkHttpClient.Builder().build() }
     private val sockets = ConcurrentHashMap<String, WebSocket>()
     // Each socket gets its own emitter tied to the LynxView that
